@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	ipath "github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/boxo/gateway/assets"
+	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
 	"github.com/ipld/go-ipld-prime/multicodec"
 	"github.com/ipld/go-ipld-prime/node/basicnode"
@@ -149,7 +149,7 @@ func (i *handler) renderCodec(ctx context.Context, w http.ResponseWriter, r *htt
 	return i.serveCodecConverted(ctx, w, r, blockCid, blockData, rq.contentPath, toCodec, modtime, rq.begin)
 }
 
-func (i *handler) serveCodecHTML(ctx context.Context, w http.ResponseWriter, r *http.Request, blockCid cid.Cid, blockData io.ReadSeekCloser, resolvedPath ipath.Resolved, contentPath ipath.Path) bool {
+func (i *handler) serveCodecHTML(ctx context.Context, w http.ResponseWriter, r *http.Request, blockCid cid.Cid, blockData io.ReadSeekCloser, resolvedPath path.ResolvedPath, contentPath path.Path) bool {
 	// WithHostname may have constructed an IPFS (or IPNS) path using the Host header.
 	// In this case, we need the original path for constructing the redirect.
 	requestURI, err := url.ParseRequestURI(r.RequestURI)
@@ -229,21 +229,21 @@ func parseNode(blockCid cid.Cid, blockData io.ReadSeekCloser) *assets.ParsedNode
 }
 
 // serveCodecRaw returns the raw block without any conversion
-func (i *handler) serveCodecRaw(ctx context.Context, w http.ResponseWriter, r *http.Request, blockData io.ReadSeekCloser, contentPath ipath.Path, name string, modtime, begin time.Time) bool {
+func (i *handler) serveCodecRaw(ctx context.Context, w http.ResponseWriter, r *http.Request, blockData io.ReadSeekCloser, contentPath path.Path, name string, modtime, begin time.Time) bool {
 	// ServeContent will take care of
 	// If-None-Match+Etag, Content-Length and range requests
 	_, dataSent, _ := serveContent(w, r, name, modtime, blockData)
 
 	if dataSent {
 		// Update metrics
-		i.jsoncborDocumentGetMetric.WithLabelValues(contentPath.Namespace()).Observe(time.Since(begin).Seconds())
+		i.jsoncborDocumentGetMetric.WithLabelValues(contentPath.Namespace().String()).Observe(time.Since(begin).Seconds())
 	}
 
 	return dataSent
 }
 
 // serveCodecConverted returns payload converted to codec specified in toCodec
-func (i *handler) serveCodecConverted(ctx context.Context, w http.ResponseWriter, r *http.Request, blockCid cid.Cid, blockData io.ReadSeekCloser, contentPath ipath.Path, toCodec mc.Code, modtime, begin time.Time) bool {
+func (i *handler) serveCodecConverted(ctx context.Context, w http.ResponseWriter, r *http.Request, blockCid cid.Cid, blockData io.ReadSeekCloser, contentPath path.Path, toCodec mc.Code, modtime, begin time.Time) bool {
 	codec := blockCid.Prefix().Codec
 	decoder, err := multicodec.LookupDecoder(codec)
 	if err != nil {
@@ -281,14 +281,14 @@ func (i *handler) serveCodecConverted(ctx context.Context, w http.ResponseWriter
 	_, err = w.Write(buf.Bytes())
 	if err == nil {
 		// Update metrics
-		i.jsoncborDocumentGetMetric.WithLabelValues(contentPath.Namespace()).Observe(time.Since(begin).Seconds())
+		i.jsoncborDocumentGetMetric.WithLabelValues(contentPath.Namespace().String()).Observe(time.Since(begin).Seconds())
 		return true
 	}
 
 	return false
 }
 
-func setCodecContentDisposition(w http.ResponseWriter, r *http.Request, resolvedPath ipath.Resolved, contentType string) string {
+func setCodecContentDisposition(w http.ResponseWriter, r *http.Request, resolvedPath path.ResolvedPath, contentType string) string {
 	var dispType, name string
 
 	ext, ok := contentTypeToExtension[contentType]

@@ -11,15 +11,15 @@ import (
 	"time"
 
 	"github.com/gabriel-vasile/mimetype"
-	ipath "github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/boxo/files"
+	"github.com/ipfs/boxo/path"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
 // serveFile returns data behind a file along with HTTP headers based on
 // the file itself, its CID and the contentPath used for accessing it.
-func (i *handler) serveFile(ctx context.Context, w http.ResponseWriter, r *http.Request, resolvedPath ipath.Resolved, contentPath ipath.Path, file files.File, fileContentType string, begin time.Time) bool {
+func (i *handler) serveFile(ctx context.Context, w http.ResponseWriter, r *http.Request, resolvedPath path.ResolvedPath, contentPath path.Path, file files.File, fileContentType string, begin time.Time) bool {
 	_, span := spanTrace(ctx, "Handler.ServeFile", trace.WithAttributes(attribute.String("path", resolvedPath.String())))
 	defer span.End()
 
@@ -98,7 +98,7 @@ func (i *handler) serveFile(ctx context.Context, w http.ResponseWriter, r *http.
 	// Was response successful?
 	if dataSent {
 		// Update metrics
-		i.unixfsFileGetMetric.WithLabelValues(contentPath.Namespace()).Observe(time.Since(begin).Seconds())
+		i.unixfsFileGetMetric.WithLabelValues(contentPath.Namespace().String()).Observe(time.Since(begin).Seconds())
 	}
 
 	return dataSent

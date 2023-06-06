@@ -10,10 +10,9 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	ipath "github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/gateway/assets"
-	path "github.com/ipfs/boxo/path"
+	"github.com/ipfs/boxo/path"
 	cid "github.com/ipfs/go-cid"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -23,7 +22,7 @@ import (
 // serveDirectory returns the best representation of UnixFS directory
 //
 // It will return index.html if present, or generate directory listing otherwise.
-func (i *handler) serveDirectory(ctx context.Context, w http.ResponseWriter, r *http.Request, resolvedPath ipath.Resolved, contentPath ipath.Path, isHeadRequest bool, directoryMetadata *directoryMetadata, ranges []ByteRange, begin time.Time, logger *zap.SugaredLogger) bool {
+func (i *handler) serveDirectory(ctx context.Context, w http.ResponseWriter, r *http.Request, resolvedPath path.ResolvedPath, contentPath path.Path, isHeadRequest bool, directoryMetadata *directoryMetadata, ranges []ByteRange, begin time.Time, logger *zap.SugaredLogger) bool {
 	ctx, span := spanTrace(ctx, "Handler.ServeDirectory", trace.WithAttributes(attribute.String("path", resolvedPath.String())))
 	defer span.End()
 
@@ -59,8 +58,19 @@ func (i *handler) serveDirectory(ctx context.Context, w http.ResponseWriter, r *
 	}
 
 	// Check if directory has index.html, if so, serveFile
-	idxPath := ipath.Join(contentPath, "index.html")
-	imIndexPath, err := NewImmutablePath(ipath.Join(resolvedPath, "index.html"))
+	idxPath, err := path.Join(contentPath, "index.html")
+	if err != nil {
+		i.webError(w, r, err, http.StatusInternalServerError)
+		return false
+	}
+
+	indexPath, err := path.Join(resolvedPath, "index.html")
+	if err != nil {
+		i.webError(w, r, err, http.StatusInternalServerError)
+		return false
+	}
+
+	imIndexPath, err := path.NewImmutablePath(indexPath)
 	if err != nil {
 		i.webError(w, r, err, http.StatusInternalServerError)
 		return false
@@ -96,7 +106,7 @@ func (i *handler) serveDirectory(ctx context.Context, w http.ResponseWriter, r *
 		// write to request
 		success := i.serveFile(ctx, w, r, resolvedPath, idxPath, idxFile, "text/html", begin)
 		if success {
-			i.unixfsDirIndexGetMetric.WithLabelValues(contentPath.Namespace()).Observe(time.Since(begin).Seconds())
+			i.unixfsDirIndexGetMetric.WithLabelValues(contentPath.Namespace().String()).Observe(time.Since(begin).Seconds())
 		}
 		return success
 	}
@@ -148,7 +158,7 @@ func (i *handler) serveDirectory(ctx context.Context, w http.ResponseWriter, r *
 	backLink := originalURLPath
 
 	// don't go further up than /ipfs/$hash/
-	pathSplit := path.SplitList(contentPath.String())
+	pathSplit := strings.Split(contentPath.String(), "/")
 	switch {
 	// skip backlink when listing a content root
 	case len(pathSplit) == 3: // url: /ipfs/$hash
@@ -190,7 +200,7 @@ func (i *handler) serveDirectory(ctx context.Context, w http.ResponseWriter, r *
 	}
 
 	// Update metrics
-	i.unixfsGenDirListingGetMetric.WithLabelValues(contentPath.Namespace()).Observe(time.Since(begin).Seconds())
+	i.unixfsGenDirListingGetMetric.WithLabelValues(contentPath.Namespace().String()).Observe(time.Since(begin).Seconds())
 	return true
 }
 

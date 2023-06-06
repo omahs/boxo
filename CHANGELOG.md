@@ -18,6 +18,11 @@ The following emojis are used to highlight certain changes:
 
 ### Changed
 
+* 🛠 The `path` package has been massively refactored. With this refactor, we have
+  condensed the different path-related packages under a single one. Therefore, there
+  are many breaking changes. Please consult the [documentation](https://pkg.go.dev/github.com/ipfs/boxo/path)
+  for more details on how to use the new package.
+
 ### Removed
 
 ### Fixed
