@@ -259,13 +259,12 @@ func (bb *BlocksBackend) GetCAR(ctx context.Context, p path.ImmutablePath, param
 		// Setup the UnixFS resolver.
 		f := newNodeGetterFetcherSingleUseFactory(ctx, blockGetter)
 		pathResolver := resolver.NewBasicResolver(f)
-		ip := ipfspath.FromString(p.String())
-		_, _, err = pathResolver.ResolveToLastNode(ctx, ip)
+		_, _, err = pathResolver.ResolveToLastNode(ctx, p)
 
 		if isErrNotFound(err) {
 			return ContentPathMetadata{
 				PathSegmentRoots: nil,
-				LastSegment:      ifacepath.NewResolvedPath(ip, rootCid, rootCid, ""),
+				LastSegment:      path.NewIPFSPath(rootCid),
 				ContentType:      "",
 			}, io.NopCloser(&buf), nil
 		}
