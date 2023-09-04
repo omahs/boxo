@@ -128,13 +128,13 @@ func (i *handler) serveDefaults(ctx context.Context, w http.ResponseWriter, r *h
 		// Handling Unixfs file
 		if bytesResponse != nil {
 			rq.logger.Debugw("serving unixfs file", "path", rq.contentPath)
-			return i.serveFile(ctx, w, r, resolvedPath, rq.contentPath, bytesResponse, pathMetadata.ContentType, rq.begin)
+			return i.serveFile(ctx, w, r, resolvedPath, rq, bytesResponse, pathMetadata.ContentType)
 		}
 
 		// Handling Unixfs directory
 		if directoryMetadata != nil || isDirectoryHeadRequest {
 			rq.logger.Debugw("serving unixfs directory", "path", rq.contentPath)
-			return i.serveDirectory(ctx, w, r, resolvedPath, rq.contentPath, isDirectoryHeadRequest, directoryMetadata, ranges, rq.begin, rq.logger)
+			return i.serveDirectory(ctx, w, r, resolvedPath, rq, isDirectoryHeadRequest, directoryMetadata, ranges)
 		}
 
 		i.webError(w, r, fmt.Errorf("unsupported UnixFS type"), http.StatusInternalServerError)

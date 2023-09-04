@@ -19,15 +19,15 @@ import (
 
 // serveFile returns data behind a file along with HTTP headers based on
 // the file itself, its CID and the contentPath used for accessing it.
-func (i *handler) serveFile(ctx context.Context, w http.ResponseWriter, r *http.Request, resolvedPath path.ImmutablePath, contentPath path.Path, file files.File, fileContentType string, begin time.Time) bool {
+func (i *handler) serveFile(ctx context.Context, w http.ResponseWriter, r *http.Request, resolvedPath path.ImmutablePath, rq *requestData, file files.File, fileContentType string) bool {
 	_, span := spanTrace(ctx, "Handler.ServeFile", trace.WithAttributes(attribute.String("path", resolvedPath.String())))
 	defer span.End()
 
 	// Set Cache-Control and read optional Last-Modified time
-	modtime := addCacheControlHeaders(w, r, contentPath, resolvedPath.Cid(), "")
+	modtime := addCacheControlHeaders(w, r, rq.contentPath, rq.ttl, rq.lastMod, resolvedPath.Cid(), "")
 
 	// Set Content-Disposition
-	name := addContentDispositionHeader(w, r, contentPath)
+	name := addContentDispositionHeader(w, r, rq.contentPath)
 
 	// Prepare size value for Content-Length HTTP header (set inside of http.ServeContent)
 	size, err := file.Size()
@@ -98,7 +98,7 @@ func (i *handler) serveFile(ctx context.Context, w http.ResponseWriter, r *http.
 	// Was response successful?
 	if dataSent {
 		// Update metrics
-		i.unixfsFileGetMetric.WithLabelValues(contentPath.Namespace().String()).Observe(time.Since(begin).Seconds())
+		i.unixfsFileGetMetric.WithLabelValues(rq.contentPath.Namespace().String()).Observe(time.Since(rq.begin).Seconds())
 	}
 
 	return dataSent
