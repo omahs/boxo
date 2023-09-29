@@ -16,6 +16,9 @@ The following emojis are used to highlight certain changes:
 
 ### Added
 
+- ✨ Migrated repositories into Boxo
+  - github.com/ipfs/kubo/core/bootstrap => ./bootstrap
+
 ### Changed
 
 ### Removed
